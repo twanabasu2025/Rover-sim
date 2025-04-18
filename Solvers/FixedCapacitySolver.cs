@@ -18,27 +18,52 @@ public class FixedCapacitySolver
 
     public async Task SolveAsync()
     {
-        float usableWh = _config.Batteries.Sum(b => b.Capacity) * (_exParams.FixedCapacity / 100f);
+        float soc = _exParams.FixedCapacity; // in %
+        if (soc <= 0 || _config.Motors.Count == 0 || _config.Batteries.Count == 0)
+        {
+            Console.WriteLine("⚠️ Invalid config or state of charge.");
+            return;
+        }
 
-        // Use same voltage and gear approach
-        float voltage = _config.Batteries[0].Voltage * 0.8f;
+        float totalWh = _config.Batteries.Sum(b => b.Capacity); // total watt-hours
+        float usableWh = (soc / 100f) * totalWh;
 
-        var motorSpeeds = _config.Motors.Select(m =>
+        float batteryVoltage = _config.Batteries[0].Voltage;
+
+        // ✅ Corrected: Use CurrentRating from motor model
+        float totalMotorPowerW = _config.Motors.Sum(m => batteryVoltage * m.CurrentRating);
+        if (totalMotorPowerW <= 0)
+        {
+            Console.WriteLine("⚠️ Total motor power is invalid.");
+            return;
+        }
+
+        // Estimate average speed (like in FixedDistance)
+        float voltage = batteryVoltage * 0.8f;
+        var wheelSpeeds = _config.Motors.Select(m =>
         {
             float wheelRpm = (m.Kv * voltage) / _config.GearRatio;
             float wheelSpeed = (wheelRpm * _config.WheelDiameter * MathF.PI) / 60.0f;
-            float power = voltage * m.CurrentRating;
-            return new { Speed = wheelSpeed, Power = power };
+
+            if (float.IsNaN(wheelSpeed) || float.IsInfinity(wheelSpeed))
+                wheelSpeed = 0f;
+
+            return wheelSpeed;
         }).ToList();
 
-        float avgSpeed = motorSpeeds.Average(x => x.Speed); // mm/s
-        float totalPower = motorSpeeds.Sum(x => x.Power);   // watts
+        float averageSpeed = wheelSpeeds.Average();
 
-        float travelTime = usableWh * 3600f / totalPower; // seconds
-        float distanceMm = avgSpeed * travelTime;
-        float distanceKm = distanceMm / 1_000_000f;
+        float hoursAvailable = usableWh / totalMotorPowerW;
+        float travelDistanceMm = averageSpeed * (float)(hoursAvailable * 3600); // mm = mm/s * s
+        float travelDistanceKm = travelDistanceMm / 1_000_000f;
 
-        Console.WriteLine($"Submitting fixed capacity distance: {distanceKm:F2} km");
-        await _client.PostFixedCapacityAsync(distanceKm);
+        if (float.IsNaN(travelDistanceKm) || float.IsInfinity(travelDistanceKm))
+        {
+            Console.WriteLine("⚠️ Computed distance is invalid.");
+            return;
+        }
+
+        Console.WriteLine($"🚗 Submitting fixed capacity distance: {travelDistanceKm} km");
+        await _client.PostFixedCapacityAsync(travelDistanceKm);
     }
 }
