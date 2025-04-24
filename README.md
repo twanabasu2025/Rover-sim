@@ -101,30 +101,11 @@ Motor_A speed: 1203.42 mm/s
 📝 Message: Rover moved successfully
 ```
 
----
-
-## ✨ Features
-
-- Clean async architecture
-- Modular Solver classes
-- Fully matches real-time simulator config
-- JSON error handling and logging
-- Fully ready for GitHub or delivery submission
-
----
 
 ## 📫 Contact
 
 **Sushma Twanabasu**  
 ✉️ Email: sushma.twanabasu@example.com  
-🌐 GitHub: https://github.com/YOUR_USERNAME
+🌐 GitHub: https://github.com/twanabasu2025
 
----
 
-## ✅ Submission Status
-
-- [x] All Solvers Implemented
-- [x] Compilation ✅
-- [x] JSON APIs Integrated
-- [x] End-to-End Testing Passed
-- [x] Finalized for submission
