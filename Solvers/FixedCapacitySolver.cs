@@ -19,39 +19,47 @@ namespace RoverCommander.Solvers
         public async Task SolveAsync()
         {
             float soc = _exParams.FixedCapacity.Value;
+
             if (soc <= 0 || _config.Motors.Count == 0 || _config.Batteries.Count == 0)
             {
-                Console.WriteLine("⚠️ Invalid SOC or missing config.");
+                Console.WriteLine("Battery state of charge or configuration is invalid, skipping fixed capacity solver.");
                 return;
             }
 
+            // First calculate how much usable energy we have in watt-hours
             float totalWh = _config.Batteries.Sum(b => b.Capacity);
             float usableWh = (soc / 100f) * totalWh;
+
+            // Estimate the total power draw of all motors at maximum voltage
             float voltage = _config.Batteries.Max(b => b.MaxVoltage);
             float totalPowerW = _config.Motors.Sum(m => voltage * m.CurrentRating);
 
             if (totalPowerW <= 0)
             {
-                Console.WriteLine("⚠️ Total motor power is zero.");
+                Console.WriteLine("Motor power calculation returned zero, cannot proceed.");
                 return;
             }
 
-            float driveVoltage = voltage * 0.8f;
+            // Simulate operating at 80% of maximum voltage for safety
+            float operatingVoltage = voltage * 0.8f;
 
+            // Compute individual wheel speeds for the given operating voltage
             var speeds = _config.Motors.Select(m =>
             {
-                float rpm = m.KvRating * driveVoltage;
-                float wheelRPM = rpm / m.Wheel.GearRatio;
+                float motorRPM = m.KvRating * operatingVoltage;
+                float wheelRPM = motorRPM / m.Wheel.GearRatio;
                 float speed = (wheelRPM * m.Wheel.Diameter * MathF.PI) / 60f;
                 return float.IsFinite(speed) ? speed : 0f;
             }).ToList();
 
             float avgSpeed = speeds.Average();
-            float hours = usableWh / totalPowerW;
-            float mm = avgSpeed * hours * 3600;
-            float km = mm / 1_000_000f;
 
-            await _client.PostFixedCapacityAsync(km);
+            // Compute how long we can run the motors and how far that gets us
+            float hoursAvailable = usableWh / totalPowerW;
+            float distanceMm = avgSpeed * hoursAvailable * 3600;
+            float distanceKm = distanceMm / 1_000_000f;
+
+            await _client.PostFixedCapacityAsync(distanceKm);
         }
     }
 }

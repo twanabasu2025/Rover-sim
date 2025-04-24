@@ -11,38 +11,45 @@ namespace RoverCommander
     {
         static async Task Main(string[] args)
         {
-            Console.WriteLine("🚀 Starting Rover Commander Client...\n");
+            Console.WriteLine("Starting Rover Commander Client...");
 
-            // Initialize HTTP client to talk to simulator
-            using var httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:8080/") };
+            // Set up the HTTP client to communicate with the simulator
+            using var httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("http://localhost:8080/")
+            };
+
             var roverSimClient = new RoverSimClient(httpClient);
 
-            // Fetch current rover configuration
-            Console.WriteLine("📦 Fetching rover config...");
+            // Fetch the rover's hardware configuration
+            Console.WriteLine("Getting rover configuration...");
             RoverConfig config = await roverSimClient.GetRoverConfigAsync();
 
-            // Fetch exercise parameters
-            Console.WriteLine("🧪 Fetching exercise parameters...");
+            // Fetch the values used for this run's simulation exercises
+            Console.WriteLine("Getting exercise parameters...");
             ExerciseParameters exParams = await roverSimClient.GetExerciseParametersAsync();
 
-            // Run each solver
-            Console.WriteLine("\n--- 🛞 Solving Fixed Distance ---");
+            // Solve fixed distance challenge
+            Console.WriteLine("Solving: Fixed Distance...");
             var fixedDistanceSolver = new FixedDistanceSolver(roverSimClient, config, exParams);
             await fixedDistanceSolver.SolveAsync();
 
-            Console.WriteLine("\n--- 🔋 Solving Fixed Capacity ---");
+            // Solve fixed capacity challenge
+            Console.WriteLine("Solving: Fixed Capacity...");
             var fixedCapacitySolver = new FixedCapacitySolver(roverSimClient, config, exParams);
             await fixedCapacitySolver.SolveAsync();
 
-            Console.WriteLine("\n--- ☀️ Solving Fixed Irradiance ---");
+            // Solve fixed irradiance challenge
+            Console.WriteLine("Solving: Fixed Irradiance...");
             var fixedIrradianceSolver = new FixedIrradianceSolver(roverSimClient, config, exParams);
             await fixedIrradianceSolver.SolveAsync();
 
-            Console.WriteLine("\n--- 🌅 Solving Variable Irradiance ---");
+            // Solve variable irradiance (Martian day) challenge
+            Console.WriteLine("Solving: Variable Irradiance...");
             var variableIrradianceSolver = new VariableIrradianceSolver(roverSimClient, config, exParams);
             await variableIrradianceSolver.SolveAsync();
 
-            Console.WriteLine("\n✅ All solvers executed.");
+            Console.WriteLine("All solvers have completed.");
         }
     }
 }

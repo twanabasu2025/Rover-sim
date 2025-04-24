@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RoverCommander")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+824fed72babc0d58c2eeeaf2b53d3d40a47c8f9d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a9ce4d811035c87c8f1e45e42ad707092b4a7a70")]
 [assembly: System.Reflection.AssemblyProductAttribute("RoverCommander")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RoverCommander")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
