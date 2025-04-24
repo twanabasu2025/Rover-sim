@@ -1,0 +1,31 @@
+# Build and publish folders
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# IDE and editor settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# OS junk files
+.DS_Store
+Thumbs.db
+
+# NuGet packages 
+*.nupkg
+*.snupkg
+packages/
+
+# Docker artifacts
+*.dockerignore
+docker-compose.override.yml
