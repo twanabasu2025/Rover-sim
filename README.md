@@ -1,111 +1,75 @@
-# RoverCommander Simulation Client 🚀  
-> Mars rover motion planning challenge — by Sushma Twanabasu
+# RoverCommander
 
-This project solves a simulation-based engineering challenge for NASA's Mars Endurance Rover. A simulator provides dynamic rover configurations and environmental inputs. The client application computes appropriate motor commands or estimations and validates them through a REST API.
-
----
-
-## 👩‍💻 Author
-
-**Sushma Twanabasu**  
-.NET Developer | Systems Designer | Simulation Enthusiast
+This is a .NET console application that interacts with a simulated Mars rover system. The simulator exposes a REST API with dynamic rover configurations. This application calculates and submits answers to four engineering challenges using the provided data.
 
 ---
 
-## 🧠 Project Overview
+## Author
 
-The application connects to the `rover_sim` HTTP server and solves the following four exercises:
-
-1. **Fixed Distance**
-   - Calculate voltages + duration to move a fixed distance
-
-2. **Fixed Capacity**
-   - Determine the maximum distance the rover can travel with partial battery charge
-
-3. **Fixed Irradiance**
-   - Estimate the maximum speed sustainable under constant solar input
-
-4. **Variable Irradiance**
-   - Determine how far the rover can travel in a full Martian day with varying sunlight
-
-Each solution is computed based on rover motor specs, solar panel configuration, and battery capacity, and then POSTed to the server for validation.
+Sushma Twanabasu  
+Email: sushma.twanabasu@example.com  
+GitHub: https://github.com/twanabasu2025
 
 ---
 
-## 🔧 Tech Stack
+## Project Summary
 
-- [.NET 9.0](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
+The simulator provides a new rover configuration and challenge inputs on every run. The application performs calculations based on motor specs, wheel dimensions, gear ratios, battery capacity, and solar panel characteristics.
+
+Implemented solvers:
+
+- Fixed Distance: Calculate voltage and duration per motor to move a specified distance.
+- Fixed Capacity: Estimate how far the rover can travel given a battery state of charge.
+- Fixed Irradiance: Determine max sustainable speed under constant sunlight.
+- Variable Irradiance: Estimate total distance traveled in one Martian day with sinusoidal solar input.
+
+---
+
+## Technologies
+
+- .NET 9
 - C# 11
 - System.Text.Json
-- `HttpClient`
-- Docker (used to run the rover simulator)
+- HttpClient
+- Docker (used to run the simulator)
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 RoverCommander/
-├── Models/                # DTOs and config models
-├── Services/              # HTTP client for simulator API
-├── Solvers/               # Logic to solve each challenge
-├── Program.cs             # App entry point
-├── RoverCommander.csproj  # .NET project file
+├── Models/                // Data structures
+├── Services/              // API communication
+├── Solvers/               // Solver logic for each challenge
+├── Program.cs             // Entry point
+├── RoverCommander.csproj  // Project file
 ```
 
 ---
 
-## 🚀 How to Run the Project
+## How to Run
 
-### Step 1: Clone the Repo
-```bash
-git clone https://github.com/YOUR_USERNAME/RoverCommander.git
-cd RoverCommander
-```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/twanabasu2025/RoverCommander.git
+   cd RoverCommander
+   ```
 
-### Step 2: Run the Simulator
+2. Start the simulator:
+   - Run the binary directly:
+     ```bash
+     ./rover_sim
+     ```
+   - Or use Docker:
+     ```bash
+     docker-compose up
+     ```
 
-#### Option A: Using Binary
-```bash
-./rover_sim
-```
+3. Run the application:
+   ```bash
+   dotnet build
+   dotnet run
+   ```
 
-#### Option B: Using Docker
-```bash
-docker-compose up
-```
-
-Make sure the server shows:
-```
-Server is running on http://0.0.0.0:8080
-GET /health
-GET /rover/config
-GET /exercises
-```
-
----
-
-### Step 3: Run the Application
-
-```bash
-dotnet build
-dotnet run
-```
-
-You’ll see logs like:
-```bash
---- 🛞 Solving Fixed Distance ---
-Motor_A speed: 1203.42 mm/s
-...
-✅ Status: 200 OK
-📝 Message: Rover moved successfully
-```
-
-
-## 📫 Contact
-
-**Sushma Twanabasu**  
-✉️ Email: sushma.twanabasu@example.com  
-🌐 GitHub: https://github.com/twanabasu2025
-
-
+Each solver will run in sequence and post its result to the simulator. Results will be printed to the terminal.
