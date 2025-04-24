@@ -1,69 +1,57 @@
 using RoverCommander.Models;
 using RoverCommander.Services;
 
-namespace RoverCommander.Solvers;
-
-public class FixedCapacitySolver
+namespace RoverCommander.Solvers
 {
-    private readonly RoverSimClient _client;
-    private readonly RoverConfig _config;
-    private readonly ExerciseParameters _exParams;
-
-    public FixedCapacitySolver(RoverSimClient client, RoverConfig config, ExerciseParameters exParams)
+    public class FixedCapacitySolver
     {
-        _client = client;
-        _config = config;
-        _exParams = exParams;
-    }
+        private readonly RoverSimClient _client;
+        private readonly RoverConfig _config;
+        private readonly ExerciseParameters _exParams;
 
-    public async Task SolveAsync()
-    {
-        float soc = _exParams.FixedCapacity; // in %
-        if (soc <= 0 || _config.Motors.Count == 0 || _config.Batteries.Count == 0)
+        public FixedCapacitySolver(RoverSimClient client, RoverConfig config, ExerciseParameters exParams)
         {
-            Console.WriteLine("⚠️ Invalid config or state of charge.");
-            return;
+            _client = client;
+            _config = config;
+            _exParams = exParams;
         }
 
-        float totalWh = _config.Batteries.Sum(b => b.Capacity); // total watt-hours
-        float usableWh = (soc / 100f) * totalWh;
-
-        float batteryVoltage = _config.Batteries[0].Voltage;
-
-        // ✅ Corrected: Use CurrentRating from motor model
-        float totalMotorPowerW = _config.Motors.Sum(m => batteryVoltage * m.CurrentRating);
-        if (totalMotorPowerW <= 0)
+        public async Task SolveAsync()
         {
-            Console.WriteLine("⚠️ Total motor power is invalid.");
-            return;
+            float soc = _exParams.FixedCapacity.Value;
+            if (soc <= 0 || _config.Motors.Count == 0 || _config.Batteries.Count == 0)
+            {
+                Console.WriteLine("⚠️ Invalid SOC or missing config.");
+                return;
+            }
+
+            float totalWh = _config.Batteries.Sum(b => b.Capacity);
+            float usableWh = (soc / 100f) * totalWh;
+            float voltage = _config.Batteries.Max(b => b.MaxVoltage);
+            float totalPowerW = _config.Motors.Sum(m => voltage * m.CurrentRating);
+
+            if (totalPowerW <= 0)
+            {
+                Console.WriteLine("⚠️ Total motor power is zero.");
+                return;
+            }
+
+            float driveVoltage = voltage * 0.8f;
+
+            var speeds = _config.Motors.Select(m =>
+            {
+                float rpm = m.KvRating * driveVoltage;
+                float wheelRPM = rpm / m.Wheel.GearRatio;
+                float speed = (wheelRPM * m.Wheel.Diameter * MathF.PI) / 60f;
+                return float.IsFinite(speed) ? speed : 0f;
+            }).ToList();
+
+            float avgSpeed = speeds.Average();
+            float hours = usableWh / totalPowerW;
+            float mm = avgSpeed * hours * 3600;
+            float km = mm / 1_000_000f;
+
+            await _client.PostFixedCapacityAsync(km);
         }
-
-        // Estimate average speed (like in FixedDistance)
-        float voltage = batteryVoltage * 0.8f;
-        var wheelSpeeds = _config.Motors.Select(m =>
-        {
-            float wheelRpm = (m.Kv * voltage) / _config.GearRatio;
-            float wheelSpeed = (wheelRpm * _config.WheelDiameter * MathF.PI) / 60.0f;
-
-            if (float.IsNaN(wheelSpeed) || float.IsInfinity(wheelSpeed))
-                wheelSpeed = 0f;
-
-            return wheelSpeed;
-        }).ToList();
-
-        float averageSpeed = wheelSpeeds.Average();
-
-        float hoursAvailable = usableWh / totalMotorPowerW;
-        float travelDistanceMm = averageSpeed * (float)(hoursAvailable * 3600); // mm = mm/s * s
-        float travelDistanceKm = travelDistanceMm / 1_000_000f;
-
-        if (float.IsNaN(travelDistanceKm) || float.IsInfinity(travelDistanceKm))
-        {
-            Console.WriteLine("⚠️ Computed distance is invalid.");
-            return;
-        }
-
-        Console.WriteLine($"🚗 Submitting fixed capacity distance: {travelDistanceKm} km");
-        await _client.PostFixedCapacityAsync(travelDistanceKm);
     }
 }

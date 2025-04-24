@@ -1,91 +1,85 @@
 using System.Net.Http;
-using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using RoverCommander.Models;
 
-namespace RoverCommander.Services;
-
-public class RoverSimClient
+namespace RoverCommander.Services
 {
-    private readonly HttpClient _httpClient;
-
-    public RoverSimClient(string baseAddress)
+    public class RoverSimClient
     {
-        var handler = new HttpClientHandler
-        {
-            AllowAutoRedirect = true
-        };
+        private readonly HttpClient _http;
+        private readonly JsonSerializerOptions _jsonOptions;
 
-        _httpClient = new HttpClient(handler)
+        public RoverSimClient(HttpClient httpClient)
         {
-            BaseAddress = new Uri(baseAddress),
-            Timeout = TimeSpan.FromSeconds(5)
-        };
-
-        _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "curl/8.11.1");
-        _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "*/*");
-    }
-
-    public async Task<bool> CheckHealthAsync()
-    {
-        for (int i = 0; i < 5; i++)
-        {
-            try
+            _http = httpClient;
+            _jsonOptions = new JsonSerializerOptions
             {
-                Console.WriteLine($"🔍 Attempting health check at {_httpClient.BaseAddress}health");
-
-                var response = await _httpClient.GetAsync("/health");
-                var content = await response.Content.ReadAsStringAsync();
-
-                Console.WriteLine($"🔎 Status: {(int)response.StatusCode} {response.StatusCode}");
-                Console.WriteLine($"📦 Body: {content}");
-
-                if (response.IsSuccessStatusCode ||
-                    ((int)response.StatusCode == 418 && content.Contains("Ok", StringComparison.OrdinalIgnoreCase)))
-                {
-                    Console.WriteLine("✅ Health check passed.");
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Exception during health check: {ex.GetType().Name} - {ex.Message}");
-            }
-
-            Console.WriteLine($"Health check failed. Retrying... ({i + 1}/5)\n");
-            await Task.Delay(1000);
+                PropertyNameCaseInsensitive = true,
+                WriteIndented = true
+            };
         }
 
-        return false;
-    }
-
-    public async Task<RoverConfig> GetRoverConfigAsync()
-    {
-        return await _httpClient.GetFromJsonAsync<RoverConfig>("/rover/config")
-            ?? throw new InvalidOperationException("Failed to fetch rover config");
-    }
-
-    public async Task<ExerciseParameters> GetExercisesAsync()
-    {
-        return await _httpClient.GetFromJsonAsync<ExerciseParameters>("/exercises")
-            ?? throw new InvalidOperationException("Failed to fetch exercise parameters");
-    }
-
-    public async Task PostFixedDistanceAsync(object command)
-    {
-        var options = new JsonSerializerOptions
+        public async Task<RoverConfig> GetRoverConfigAsync()
         {
-            NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
-        };
+            var response = await _http.GetAsync("rover/config");
+            response.EnsureSuccessStatusCode();
 
-        var response = await _httpClient.PostAsJsonAsync("/verify/fixed_distance", command, options);
-        Console.WriteLine(await response.Content.ReadAsStringAsync());
-    }
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<RoverConfig>(json, _jsonOptions)!;
+        }
 
-    public async Task PostFixedCapacityAsync(double distance)
-    {
-        var response = await _httpClient.PostAsJsonAsync("/verify/fixed_capacity", distance);
-        Console.WriteLine(await response.Content.ReadAsStringAsync());
+        public async Task<ExerciseParameters> GetExerciseParametersAsync()
+        {
+            var response = await _http.GetAsync("exercises");
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<ExerciseParameters>(json, _jsonOptions)!;
+        }
+
+        public async Task PostFixedDistanceAsync(FixedDistanceCommand command)
+        {
+            var json = JsonSerializer.Serialize(command, _jsonOptions);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _http.PostAsync("verify/fixed_distance", content);
+            Console.WriteLine("\n📡 POST /verify/fixed_distance");
+            Console.WriteLine($"✅ Status: {response.StatusCode}");
+            Console.WriteLine($"📝 Message: {await response.Content.ReadAsStringAsync()}");
+        }
+
+        public async Task PostFixedCapacityAsync(float distance)
+        {
+            var json = JsonSerializer.Serialize(distance);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _http.PostAsync("verify/fixed_capacity", content);
+            Console.WriteLine("\n📡 POST /verify/fixed_capacity");
+            Console.WriteLine($"✅ Status: {response.StatusCode}");
+            Console.WriteLine($"📝 Message: {await response.Content.ReadAsStringAsync()}");
+        }
+
+        public async Task PostFixedIrradianceAsync(float speed)
+        {
+            var json = JsonSerializer.Serialize(speed);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _http.PostAsync("verify/fixed_irradiance", content);
+            Console.WriteLine("\n📡 POST /verify/fixed_irradiance");
+            Console.WriteLine($"✅ Status: {response.StatusCode}");
+            Console.WriteLine($"📝 Message: {await response.Content.ReadAsStringAsync()}");
+        }
+
+        public async Task PostVariableIrradianceAsync(float distance)
+        {
+            var json = JsonSerializer.Serialize(distance);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _http.PostAsync("verify/variable_irradiance", content);
+            Console.WriteLine("\n📡 POST /verify/variable_irradiance");
+            Console.WriteLine($"✅ Status: {response.StatusCode}");
+            Console.WriteLine($"📝 Message: {await response.Content.ReadAsStringAsync()}");
+        }
     }
 }
