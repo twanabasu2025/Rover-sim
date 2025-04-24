@@ -7,7 +7,7 @@ This is a .NET console application that interacts with a simulated Mars rover sy
 ## Author
 
 Sushma Twanabasu  
-Email: sushma.twanabasu@example.com  
+Email: twanabasu1992@gmail.com  
 GitHub: https://github.com/twanabasu2025
 
 ---
@@ -52,8 +52,8 @@ RoverCommander/
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/twanabasu2025/RoverCommander.git
-   cd RoverCommander
+    git clone https://github.com/twanabasu2025/Rover-sim.git
+    cd Rover-sim
    ```
 
 2. Start the simulator:
