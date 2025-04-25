@@ -101,3 +101,8 @@ Response: 200 OK — Rover moved the correct distance
 - No hardcoded values. Everything is based on the live config.
 - All code is async and modular.
 
+## Example Output
+
+Here’s what success looks like when the solution runs:
+
+![Simulation Output](/screenshots/1.png)
