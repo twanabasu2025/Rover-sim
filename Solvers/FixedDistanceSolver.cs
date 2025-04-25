@@ -1,7 +1,9 @@
 using RoverCommander.Models;
 using RoverCommander.Services;
-using System.Text.Json;
-using System.Text;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace RoverCommander.Solvers
 {
@@ -20,64 +22,61 @@ namespace RoverCommander.Solvers
 
         public async Task SolveAsync()
         {
-            float distance = _exParams.FixedDistance.Value;
+            float distance = _exParams.FixedDistance?.Value ?? 0;
 
-            if (distance <= 0 || _config.Motors.Count == 0 || _config.Batteries.Count == 0)
+            if (distance <= 0 || !_config.Motors.Any() || !_config.Batteries.Any())
             {
-                Console.WriteLine("Distance or config is invalid, skipping fixed distance solver.");
+                Console.WriteLine("Invalid config or distance. Skipping.");
                 return;
             }
 
-            // Instead of sending the same voltage to every motor, we compute a voltage for each one
-            // that results in the same wheel speed. This avoids the rover drifting or veering.
-
-            float targetSpeed = 500.0f; // in mm/s
-
-            var motorCommands = new List<MotorCommand>();
-            float totalSpeed = 0;
+            float maxVoltage = _config.Batteries.Max(b => b.MaxVoltage);
+            float slowestSpeed = float.MaxValue;
 
             foreach (var motor in _config.Motors)
             {
+                if (motor.KvRating <= 0 || motor.Wheel.GearRatio <= 0 || motor.Wheel.Diameter <= 0)
+                    continue;
+
+                float rpm = motor.KvRating * maxVoltage;
+                float wheelRPM = rpm / motor.Wheel.GearRatio;
+                float speed = (wheelRPM * motor.Wheel.Diameter * MathF.PI) / 60f;
+
+                if (speed < slowestSpeed)
+                    slowestSpeed = speed;
+            }
+
+            float duration = distance / slowestSpeed;
+            var commands = new List<MotorCommand>();
+
+            foreach (var motor in _config.Motors)
+            {
+                if (motor.KvRating <= 0 || motor.Wheel.GearRatio <= 0 || motor.Wheel.Diameter <= 0)
+                    continue;
+
                 float wheelCircumference = (float)(Math.PI * motor.Wheel.Diameter);
-
-                // Convert desired linear speed to wheel RPM
-                float targetWheelRPM = (targetSpeed * 60) / wheelCircumference;
-
-                // Convert wheel RPM to motor RPM based on gear ratio
+                float targetWheelRPM = (slowestSpeed * 60f) / wheelCircumference;
                 float targetMotorRPM = targetWheelRPM * motor.Wheel.GearRatio;
-
-                // Calculate the voltage needed to hit that motor RPM using the motor's KV rating
                 float voltage = targetMotorRPM / motor.KvRating;
 
-                // Clamp the voltage to the max battery voltage to avoid overdriving the motor
-                float maxVoltage = _config.Batteries.Max(b => b.MaxVoltage);
                 voltage = MathF.Min(voltage, maxVoltage);
 
-                motorCommands.Add(new MotorCommand
+                commands.Add(new MotorCommand
                 {
                     Name = motor.Name,
                     Voltage = voltage
                 });
 
-                float actualMotorRPM = motor.KvRating * voltage;
-                float actualWheelRPM = actualMotorRPM / motor.Wheel.GearRatio;
-                float actualSpeed = (actualWheelRPM * wheelCircumference) / 60;
-
-                Console.WriteLine($"{motor.Name} speed: {actualSpeed:F2} mm/s at {voltage:F2} volts");
-
-                totalSpeed += actualSpeed;
+                Console.WriteLine($"{motor.Name} → Speed: {slowestSpeed:F2} mm/s @ {voltage:F2} V");
             }
 
-            float avgSpeed = totalSpeed / _config.Motors.Count;
-            float duration = distance / avgSpeed;
+            Console.WriteLine($"Distance: {distance:F2} mm | Duration: {duration:F2} s");
 
-            var command = new FixedDistanceCommand
+            await _client.PostFixedDistanceAsync(new FixedDistanceCommand
             {
                 Duration = duration,
-                MotorCommands = motorCommands
-            };
-
-            await _client.PostFixedDistanceAsync(command);
+                MotorCommands = commands
+            });
         }
     }
 }

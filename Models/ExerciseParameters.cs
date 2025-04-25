@@ -8,18 +8,30 @@ namespace RoverCommander.Models
         public ExerciseValue FixedDistance { get; set; } = new();
 
         [JsonPropertyName("fixed_capacity")]
-        public ExerciseValue FixedCapacity { get; set; } = new();
+        public FixedCapacity FixedCapacity { get; set; } = new();
 
         [JsonPropertyName("fixed_irradiance")]
         public ExerciseValue FixedIrradiance { get; set; } = new();
 
         [JsonPropertyName("variable_irradiance")]
-        public ExerciseValue VariableIrradiance { get; set; } = new();
+        public VariableIrradiance VariableIrradiance { get; set; } = new();
     }
 
     public class ExerciseValue
     {
         [JsonPropertyName("value")]
         public float Value { get; set; }
+    }
+
+    public class FixedCapacity
+    {
+        [JsonPropertyName("state_of_charge")]
+        public float StateOfCharge { get; set; }
+    }
+
+    public class VariableIrradiance
+    {
+        [JsonPropertyName("peak_value")]
+        public float PeakValue { get; set; }
     }
 }
